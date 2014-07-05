@@ -52,8 +52,8 @@ get_user_account() {
 	printf "请输入用户名："
 	read user
 	printf "请输入密码："
-	read -s password
-	password=`printf "$password" | md5sum | awk '{print $1}'`
+	read -rs password
+	password=`printf "%s" "$password" | md5sum | awk '{print $1}'`
 	echo
 }
 
