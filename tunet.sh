@@ -40,8 +40,8 @@ http_request() {
 }
 
 check_online() {
-	local online=`http_request /cgi-bin/do_login -d \"action=check_online\"`
-	[[ -n "$online" ]] && (echo "已登录清华大学校园网。"; display_online_status "$online")
+	local online=`http_request /do_login.php -d \"action=check_online\"`
+	[ $online == online ] && (echo "已登录清华大学校园网。"; display_online_status)
 }
 
 get_status() {
@@ -53,7 +53,7 @@ get_user_account() {
 	read user
 	printf "请输入密码："
 	read -rs password
-	password=`printf "%s" "$password" | md5sum | awk '{print $1}'`
+	password=\{MD5_HEX\}`printf "%s" "$password" | md5sum | awk '{print $1}'`
 	echo
 }
 
@@ -62,24 +62,24 @@ log_in() {
 	if [[ -z "$user" ]] || [[ -z "$password" ]]; then
 		get_user_account
 	fi
-	local data="username=$user&password=$password&drop=0&type=1&n=100"
-	local response=`http_request /cgi-bin/do_login -d \"$data\"`
-	if [[ "$response" =~ ^[0-9]+, ]]; then
-		response=(${response//,/ })
+	local data="action=login&username=$user&password=$password&ac_id=1"
+	local response=`http_request /do_login.php -d \"$data\"`
+	if [[ "$response" =~ successful ]]; then
 		echo "登录成功。"
-		echo "用户名： $user"
-		echo "已用流量：" `traffic ${response[2]}`
+        display_online_status
 		return 0
 	else
-		display_login_error $response
+		#display_login_error $response
+        echo $response
 		return 1
 	fi
 }
 
 log_out() {
-	local response=`http_request /cgi-bin/do_logout -d \"\"`
-	display_logout_result $response
-	[[ -n "$response" ]]
+	local response=`http_request /do_login.php -d \"action=logout\"`
+    echo $response
+	#display_logout_result $response
+	#[[ -n "$response" ]]
 }
 
 display_login_error() {
@@ -130,11 +130,13 @@ display_logout_result() {
 }
 
 display_online_status() {
-	local data=$1
-	local array=(${data//,/ })
-	echo "用户名：" ${array[1]}
-	echo "连接时长：" `time_elapsed ${array[4]}`
-	echo "已用流量：" `traffic ${array[2]}`
+    local response=`http_request /cgi-bin/rad_user_info`
+	response=(${response//,/ })
+    echo "用户名： ${response[0]}"
+	echo "连接时长：" `time_elapsed $[ response[2] - response[1] ]`
+    echo "已用流量：" `traffic ${response[6]}`
+    echo "登录IP：" ${response[8]}
+    echo "余额：" ${response[10]}
 }
 
 time_elapsed() {
@@ -144,10 +146,10 @@ time_elapsed() {
 traffic() {
 	echo "$1" | awk '
 		function format(bytes, base) {
-			type[base ** 3] = "GB";
-			type[base ** 2] = "MB";
+			type[base * base * base] = "GB";
+			type[base * base] = "MB";
 			type[base] = "kB";
-			for (x = base ** 3; x >= base; x /= base) {
+			for (x = base * base * base; x >= base; x /= base) {
 				if (bytes >= x) {
 					printf("%.2f %s", bytes / x, type[x]);
 					return;
@@ -177,6 +179,11 @@ usage() {
 
 if [[ $# == 0 ]]; then
 	usage; exit 0
+fi
+
+if [ ! `which curl` ]; then
+    echo "Please install curl first."
+    exit 1
 fi
 
 while getopts ":u:hv" opt; do
