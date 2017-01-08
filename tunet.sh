@@ -53,7 +53,7 @@ get_user_account() {
 	read user
 	printf "请输入密码："
 	read -rs password
-	password=\{MD5_HEX\}`printf "%s" "$password" | md5sum | awk '{print $1}'`
+	password=\{MD5_HEX\}`printf "%s" "$password" | md5 | awk '{print $1}'`
 	echo
 }
 
@@ -108,7 +108,7 @@ display_login_error() {
 	local message=""
 	if [[ "$code" =~ ^password_error@[0-9]+ ]]; then
 		message="密码错误或会话失效。"
-		message+=" [`date -d @${code:15} "+%x %T"`]"
+		message+=" [`date -r ${code:15} "+%H:%M:%S"`]"
 	else
 		message=${!code}
 	fi
@@ -140,7 +140,8 @@ display_online_status() {
 }
 
 time_elapsed() {
-	date -d "@$1" -u +%T
+	# date -d "@$1" -u +%T
+	date -r "$1" +%H:%M:%S
 }
 
 traffic() {
