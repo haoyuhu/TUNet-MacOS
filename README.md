@@ -1,7 +1,7 @@
-TUNet Shell
+TUNet Mac
 ===========
 
-Command line tool for accessing Tsinghua University Network in Linux/Unix.
+Command line tool for accessing Tsinghua University Network in Mac OS.
 
 	Usage: tunet [OPTION] COMMAND
 	
